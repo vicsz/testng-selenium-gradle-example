@@ -11,40 +11,37 @@ buildscript {
 }
 
 ext {
-    ext {
-        chromeDriverVersion = '2.24'
-        phantomJsVersion = '2.1.1'
-    }
+    chromeDriverVersion = '2.24'
+    phantomJsVersion = '2.1.1'
+
 }
 
-task downloadChromeDriver {
-    def outputFile = file("$buildDir/webdriver/chromedriver.zip")
-    inputs.property("chromeDriverVersion", chromeDriverVersion)
-    outputs.file(outputFile)
-
-    doLast {
-        def driverOsFilenamePart
-        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-            driverOsFilenamePart = "win32"
-        } else if (Os.isFamily(Os.FAMILY_MAC)) {
-            driverOsFilenamePart = "mac64"
-        } else if (Os.isFamily(Os.FAMILY_UNIX)) {
-            driverOsFilenamePart = Os.isArch("amd64") ? "linux64" : "linux32"
-        }
-        FileUtils.copyURLToFile(new URL("http://chromedriver.storage.googleapis.com/${chromeDriverVersion}/chromedriver_${driverOsFilenamePart}.zip"), outputFile)
+task setupChromeDriver {
+    def driverOsFilenamePart
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        driverOsFilenamePart = "win32"
+    } else if (Os.isFamily(Os.FAMILY_MAC)) {
+        driverOsFilenamePart = "mac64"
+    } else if (Os.isFamily(Os.FAMILY_UNIX)) {
+        driverOsFilenamePart = Os.isArch("amd64") ? "linux64" : "linux32"
     }
-}
 
-task unzipChromeDriver(type: Copy) {
+    def downloadFile = file("$buildDir/webdriver/chromedriver.zip")
     def outputDir = file("$buildDir/webdriver/chromedriver")
-    dependsOn downloadChromeDriver
+
+    inputs.property("chromeDriverVersion", chromeDriverVersion)
     outputs.dir(outputDir)
 
-    from(zipTree(downloadChromeDriver.outputs.files.singleFile))
-    into(outputDir)
+    doFirst {
+        FileUtils.copyURLToFile(new URL("http://chromedriver.storage.googleapis.com/${chromeDriverVersion}/chromedriver_${driverOsFilenamePart}.zip"), downloadFile)
+        copy{
+            from(zipTree(downloadFile))
+            into(outputDir)
+        }
+    }
 }
 
-task downloadPhantomJs {
+task setupPhantomJs {
     def osFilenamePart
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         osFilenamePart = "windows.zip"
@@ -54,38 +51,33 @@ task downloadPhantomJs {
         osFilenamePart = Os.isArch("amd64") ? "linux-x86_64.tar.bz2" : "linux-i686.tar.bz2"
     }
 
-    def filename = "phantomjs-$phantomJsVersion-$osFilenamePart"
-    def outputFile = file("$buildDir/webdriver/$filename")
-    inputs.property("phantomJsVersion", phantomJsVersion)
-    outputs.file(outputFile)
-
-    doLast {
-        FileUtils.copyURLToFile(new URL("https://bitbucket.org/ariya/phantomjs/downloads/$filename"), outputFile)
-    }
-}
-
-task unzipPhantomJs(type: Copy) {
+    def downloadFilename = "phantomjs-$phantomJsVersion-$osFilenamePart"
+    def downloadFile = file("$buildDir/webdriver/$downloadFilename")
     def outputDir = file("$buildDir/webdriver/phantomjs")
-    dependsOn downloadPhantomJs
+
+    inputs.property("phantomJsVersion", phantomJsVersion)
     outputs.dir(outputDir)
 
-    def archive = downloadPhantomJs.outputs.files.singleFile
-
-    from(Os.isFamily(Os.FAMILY_MAC) || Os.isFamily(Os.FAMILY_WINDOWS) ? zipTree(archive) : tarTree(archive))
-    into(outputDir)
-    eachFile { FileCopyDetails fcp ->
-        fcp.relativePath = new RelativePath(!fcp.directory, *fcp.relativePath.segments[1..-1])
+    doFirst {
+        FileUtils.copyURLToFile(new URL("https://bitbucket.org/ariya/phantomjs/downloads/$downloadFilename"), downloadFile)
+        copy{
+            from(Os.isFamily(Os.FAMILY_MAC) || Os.isFamily(Os.FAMILY_WINDOWS) ? zipTree(downloadFile) : tarTree(downloadFile))
+            into(outputDir)
+            eachFile { FileCopyDetails fcp ->
+                fcp.relativePath = new RelativePath(!fcp.directory, *fcp.relativePath.segments[1..-1])
+            }
+        }
     }
 }
 
 task testChrome {
     finalizedBy test
-    dependsOn unzipChromeDriver
+    dependsOn setupChromeDriver
     doLast { test { systemProperty 'webdriver.chrome.driver', "${buildDir}/webdriver/chromedriver/chromedriver${Os.isFamily(Os.FAMILY_WINDOWS)?'.exe':''}"}}
 }
 
 task testPhantomJs {
     finalizedBy test
-    dependsOn unzipPhantomJs
-    doLast { test { systemProperty 'phantomjs.binary.path', "$buildDir/webdriver/phantomjs/bin/phantomjs${Os.isFamily(Os.FAMILY_WINDOWS)?'.exe':''}" }}
+    dependsOn setupPhantomJs
+    doLast { test { systemProperty 'phantomjs_binary_path', "$buildDir/webdriver/phantomjs/bin/phantomjs${Os.isFamily(Os.FAMILY_WINDOWS)?'.exe':''}" }}
 }
