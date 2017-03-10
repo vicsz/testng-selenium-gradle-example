@@ -22,10 +22,6 @@ test {
     testLogging {
         exceptionFormat = 'full'
     }
-    //Show full exception on failure
-    testLogging {
-        exceptionFormat = 'full'
-    }
 
     //Convenience .. pipe all test results to SDOUT
     afterTest { desc, result ->
