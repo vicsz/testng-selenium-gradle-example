@@ -1,33 +1,39 @@
-import org.testng.Assert;
 import org.testng.ITest;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
-import java.lang.reflect.Method;
+import static org.testng.Assert.assertEquals;
 
 public class TestNgProviderExample implements ITest{
 
-    @Test(dataProvider = "summationProvider")
-    public void testProvider(String description, int number1, int number2, int sum) {
-        Assert.assertEquals(sum, number1 + number2);
+    protected String description;
+    protected int firstNumber;
+    protected int secondNumber;
+    protected int sum;
+
+    // Use Factory to allow fo distinct Test names , not polluted with provider data
+    @Factory(dataProvider = "summationProvider")
+    public TestNgProviderExample(String description, int firstNumber, int secondNumber, int sum) {
+        this.description = description;
+        this.firstNumber = firstNumber;
+        this.secondNumber = secondNumber;
+        this.sum = sum;
+    }
+
+    @Test
+    public void testProvider() {
+        assertEquals(this.sum, this.firstNumber + this.secondNumber);
     }
 
     @DataProvider(name = "summationProvider")
-    public Object[][] summationData() {
+    public static Object[][] summationData() {
         Object[][] testData = {{"TestName1",1,2,3},{"TestName2",2,2,4}};
         return testData;
     }
 
-    private String reportedTestName = "";
-
-    @BeforeMethod(alwaysRun = true)
-    public void testData(Method method, Object[] testData) {
-        reportedTestName = testData[0].toString();
-    }
-
     @Override
     public String getTestName() {
-        return reportedTestName;
+        return description;
     }
 }
