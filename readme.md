@@ -1,12 +1,12 @@
-#Instructions
+#Instructions - ✔️
 
-## Quick Start
+## Quick Start - 🏁
 
 1. Ensure current JDK is installed (nothing else is required -- other dependencies will automatically download )
 2. To run tests with Chrome run: ./gradlew
 3. To tun tests with PhatomJS(Headless) run: ./gradlew testPhantomJs
 
-## Notes
+## Notes - 🗒️
 
 When running from Gradle -- the build script will automatically try to download required OS specific drivers for Chrome or PhatomJS, and update requirement environment variables -- phantomjs.binary.path or webdriver.chrome.driver
 
